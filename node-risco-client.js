@@ -7,83 +7,56 @@ module.exports = (config) => {
     const PARTIALLY_ARMED = 2
 
     let accessToken, sessionId, siteId, logged
-    let { username, password, pin, languageId} = config
+    let { username, password, pin, languageId } = config
+    if (!username) throw new Error('username options is required')
+    if (!password) throw new Error('password options is required')
+    if (!pin) throw new Error('pin options is required')
+    if (!languageId) throw new Error('languageId options is required')
 
-    const login = async () => {
-        return new Promise(async (resolve, reject) => {
-            riscoClient.login(username, password, pin, languageId).catch(error => {
-                throw new Error(error)
-            }).then(result => {
-                accessToken = result.accessToken
-                sessionId = result.sessionId
-                siteId = result.siteId
-                logged = true
-                resolve({ accessToken, sessionId })
-            }).catch(reject)
-        })
+    const _login = async () => {
+        ({ accessToken, sessionId, siteId } = await riscoClient.login(username, password, pin, languageId))
+        logged = true
     }
 
-    const setAlarmState = async (state) => {
-
-        if (!logged) await login()
-
-        const result = await riscoClient.setAlarm(accessToken, sessionId, siteId, state).catch(error => {
-            throw new Error(error)
-        })
-
+    const _setAlarmState = async (state, partitionId) => {
+        if (!logged) await _login()
+        const result = await riscoClient.setAlarm(accessToken, sessionId, siteId, state, partitionId)
         return result
     }
 
     const getPartitions = async () => {
-
-        if (!logged) await login()
-
-        const { partitions } = await riscoClient.getState(accessToken, sessionId, siteId).catch(error => {
-            throw new Error(error)
-        })
-
+        if (!logged) await _login()
+        const { partitions } = await riscoClient.getState(accessToken, sessionId, siteId)
         return partitions
     }
 
     const getZones = async () => {
-
-        if (!logged) await login()
-
-        const { zones } = await riscoClient.getState(accessToken, sessionId, siteId).catch(error => {
-            throw new Error(error)
-        })
-
+        if (!logged) await _login()
+        const { zones } = await riscoClient.getState(accessToken, sessionId, siteId)
         return zones
     }
 
     const getEvents = async (newerThan, count) => {
-
-        if (!logged) await login()
-
-        const { events } = await riscoClient.getEvents(accessToken, sessionId, siteId, newerThan, count).catch(error => {
-            throw new Error(error)
-        })
-
+        if (!logged) await _login()
+        const { events } = await riscoClient.getEvents(accessToken, sessionId, siteId, newerThan, count)
         return events
     }
 
-    const disarm = async () => {
-
-        if (!logged) await login()
-        return setAlarmState(DISARMED)
+    const disarm = async (partitionId) => {
+        if (!logged) await _login()
+        return _setAlarmState(DISARMED, partitionId)
     }
 
-    const arm = async () => {
-        if (!logged) await login()
-        return setAlarmState(ARMED)
+    const arm = async (partitionId) => {
+        if (!logged) await _login()
+        return _setAlarmState(ARMED, partitionId)
     }
 
-    const partiallyArm = async () => {
-        if (!logged) await login()
-        return setAlarmState(PARTIALLY_ARMED)
+    const partiallyArm = async (partitionId) => {
+        if (!logged) await _login()
+        return _setAlarmState(PARTIALLY_ARMED, partitionId)
     }
 
     return { getPartitions, getZones, getEvents, disarm, arm, partiallyArm }
 
 }
-
