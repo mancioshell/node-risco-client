@@ -21,44 +21,59 @@ module.exports = (config) => {
 
     const _setAlarmState = async (state, partitionId) => {
         if (!logged) await _login()
-        return await riscoClient.setAlarm(accessToken, sessionId, siteId, state, partitionId).catch(error => {
-            console.log('refreshing login due to session expired or invalid token')
-            if (error.statusCode === 401) { logged = false; return _setAlarmState(state, partitionId) }
+        return riscoClient.setAlarm(accessToken, sessionId, siteId, state, partitionId).catch(error => {
+            if (error.statusCode === 401) {
+                console.log('refreshing login due to session expired or invalid token during setting alarm state')
+                logged = false;
+                return _setAlarmState(state, partitionId)
+            }
             throw new Error(error)
         })
     }
 
     const getPartitions = async () => {
         if (!logged) await _login()
-        let result = await riscoClient.getState(accessToken, sessionId, siteId).catch(error => {
-            console.log('refreshing login due to session expired or invalid token')
-            if (error.statusCode === 401) { logged = false; return getPartitions() }
+
+        return riscoClient.getState(accessToken, sessionId, siteId).then(result => {
+            return Promise.resolve(result.partitions)
+        }).catch(error => {
+            if (error.statusCode === 401) {
+                console.log('refreshing login due to session expired or invalid token retrieving partitions')
+                logged = false
+                return getPartitions()
+            }
             throw new Error(error)
         })
 
-        if (result) return result.partitions
     }
 
     const getZones = async () => {
         if (!logged) await _login()
-        let result = await riscoClient.getState(accessToken, sessionId, siteId).catch(error => {
-            console.log('refreshing login due to session expired or invalid token')
-            if (error.statusCode === 401) { logged = false; return getZones() }
+        return riscoClient.getState(accessToken, sessionId, siteId).then(result => {
+            return Promise.resolve(result.zones)
+        }).catch(error => {
+            if (error.statusCode === 401) {
+                console.log('refreshing login due to session expired or invalid token retrieving zones')
+                logged = false;
+                return getZones()
+            }
             throw new Error(error)
         })
-
-        if (result) return result.zones
     }
 
     const getEvents = async (newerThan, count) => {
         if (!logged) await _login()
-        let result = await riscoClient.getEvents(accessToken, sessionId, siteId, newerThan, count).catch(error => {
-            console.log('refreshing login due to session expired or invalid token')
-            if (error.statusCode === 401) { logged = false; return getEvents(newerThan, count) }
+
+        return riscoClient.getEvents(accessToken, sessionId, siteId, newerThan, count).then(result => {
+            return Promise.resolve(result.events)
+        }).catch(error => {
+            if (error.statusCode === 401) {
+                console.log('refreshing login due to session expired or invalid token retrieving events')
+                logged = false;
+                return getEvents(newerThan, count)
+            }
             throw new Error(error)
         })
-
-        if (result) return result.events
     }
 
     const disarm = async (partitionId) => {
